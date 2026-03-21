@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react'
+import { memo, useState, useRef, useCallback } from 'react'
 import { VoicePipeline } from '@runanywhere/web'
-import { AudioPlayback } from '@runanywhere/web-onnx'
+import { AudioPlayback } from '@runanywhere/web'
 import VoiceOrb from './VoiceOrb'
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder'
 import { SYSTEM_PROMPT } from '../lib/prompts'
@@ -243,7 +243,7 @@ export default function VoiceCompanion() {
   )
 }
 
-function MessageBubble({ message }: { message: Message }) {
+const MessageBubble = memo(function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === 'user'
 
   return (
@@ -305,7 +305,7 @@ function MessageBubble({ message }: { message: Message }) {
       </div>
     </div>
   )
-}
+})
 
 function TypingDots({ label }: { label: string }) {
   return (

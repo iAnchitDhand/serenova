@@ -37,7 +37,7 @@ export default function SetupScreen({ onReady }: Props) {
       })
       setModels(prev => prev.map(m => ({ ...m, done: true, progress: 1 })))
       setPhase('ready')
-      setTimeout(onReady, 1200)
+      setTimeout(onReady, 350)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load AI models')
       setPhase('error')

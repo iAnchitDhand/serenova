@@ -76,28 +76,43 @@ export interface DownloadProgress {
 export async function downloadAndLoadAllModels(
   onProgress: (p: DownloadProgress) => void
 ): Promise<void> {
-  for (const model of VOICE_MODELS) {
-    const status = ModelManager.getModel(model.id)?.status
-    if (status !== 'downloaded' && status !== 'loaded') {
-      await new Promise<void>((resolve, reject) => {
+  const knownModels = ModelManager.getModels()
+  const toDownload = VOICE_MODELS.filter((model) => {
+    const status = knownModels.find(m => m.id === model.id)?.status
+    const alreadyLocal = status === 'downloaded' || status === 'loaded'
+    if (alreadyLocal) {
+      onProgress({ modelId: model.id, progress: 1, name: model.name })
+    }
+    return !alreadyLocal
+  })
+
+  await Promise.all(
+    toDownload.map((model) =>
+      new Promise<void>((resolve, reject) => {
         const handler = (evt: { modelId: string; progress?: number }) => {
           if (evt.modelId === model.id) {
             onProgress({ modelId: model.id, progress: evt.progress ?? 0, name: model.name })
           }
         }
-        EventBus.shared.on('model.downloadProgress', handler)
+
+        const unsubscribe = EventBus.shared.on('model.downloadProgress', handler)
         ModelManager.downloadModel(model.id)
           .then(() => {
-            EventBus.shared.off('model.downloadProgress', handler)
+            onProgress({ modelId: model.id, progress: 1, name: model.name })
             resolve()
           })
-          .catch((err) => {
-            EventBus.shared.off('model.downloadProgress', handler)
-            reject(err)
-          })
+          .catch((err) => reject(err))
+          .finally(() => unsubscribe())
       })
+    )
+  )
+
+  for (const model of VOICE_MODELS) {
+    const status = ModelManager.getModels().find(m => m.id === model.id)?.status
+    if (status !== 'loaded') {
+      await ModelManager.loadModel(model.id, { coexist: true })
     }
-    await ModelManager.loadModel(model.id, { coexist: true })
+    onProgress({ modelId: model.id, progress: 1, name: model.name })
   }
 }
 
