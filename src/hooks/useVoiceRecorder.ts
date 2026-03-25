@@ -26,7 +26,8 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
     const ctx = new AudioContext()
     audioCtxRef.current = ctx
     const analyser = ctx.createAnalyser()
-    analyser.fftSize = 256
+    analyser.fftSize = 128 // Reduced from 256 for better performance
+    analyser.smoothingTimeConstant = 0.7 // Add smoothing
     analyserRef.current = analyser
     const src = ctx.createMediaStreamSource(stream)
     src.connect(analyser)
@@ -37,8 +38,8 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
       const avg = buf.reduce((s, v) => s + v, 0) / buf.length
       const nextLevel = Math.min(avg / 80, 1)
 
-      // Update the UI meter at ~15fps and skip tiny deltas to avoid full-tree rerenders.
-      if (now - lastMeterUpdateRef.current >= 66 && Math.abs(nextLevel - lastReportedLevelRef.current) >= 0.02) {
+      // Update the UI meter at ~20fps and skip tiny deltas to avoid full-tree rerenders.
+      if (now - lastMeterUpdateRef.current >= 50 && Math.abs(nextLevel - lastReportedLevelRef.current) >= 0.03) {
         lastMeterUpdateRef.current = now
         lastReportedLevelRef.current = nextLevel
         setAudioLevel(nextLevel)
@@ -73,12 +74,23 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
   }, [startLevelMonitor])
 
   const stopRecording = useCallback(async (): Promise<Float32Array | null> => {
-    setState('processing')
+    // Clean up animation frame first
     cancelAnimationFrame(animFrameRef.current)
     setAudioLevel(0)
     lastMeterUpdateRef.current = 0
     lastReportedLevelRef.current = 0
 
+    // Stop the audio capture first
+    if (captureRef.current) {
+      try {
+        await captureRef.current.stop()
+      } catch (e) {
+        console.warn('Error stopping capture:', e)
+      }
+      captureRef.current = null
+    }
+
+    // Then clean up audio analysis nodes
     if (analyserRef.current) {
       try { analyserRef.current.disconnect() } catch { }
       analyserRef.current = null
@@ -87,16 +99,11 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
       try { await audioCtxRef.current.close() } catch { }
       audioCtxRef.current = null
     }
+    
+    // Finally stop the media stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop())
       streamRef.current = null
-    }
-
-    if (captureRef.current) {
-      try {
-        await captureRef.current.stop()
-      } catch { }
-      captureRef.current = null
     }
 
     const chunks = chunksRef.current
@@ -115,6 +122,8 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
       offset += chunk.length
     }
 
+    // Return to idle immediately - VoiceCompanion manages pipeline state
+    setState('idle')
     return combined
   }, [])
 

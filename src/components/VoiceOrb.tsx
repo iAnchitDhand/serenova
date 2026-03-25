@@ -1,5 +1,6 @@
 import { type RecordingState } from '../hooks/useVoiceRecorder'
 import { useRipple } from '../hooks/useRipple'
+import { memo, useMemo } from 'react'
 
 interface Props {
   state: RecordingState
@@ -9,7 +10,7 @@ interface Props {
   disabled?: boolean
 }
 
-export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, disabled }: Props) {
+function VoiceOrb({ state, audioLevel, pipelineState, onPress, disabled }: Props) {
   const isRecording = state === 'recording'
   const isProcessing = state === 'processing' || pipelineState !== 'idle'
   const ripple = useRipple('rgba(245,240,232,0.35)')
@@ -17,22 +18,54 @@ export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, di
   const orbSize = 120
   const rippleScale = isRecording ? 1 + audioLevel * 0.5 : 1
 
-  const getLabel = () => {
+  const orbColor = useMemo(() => {
+    if (isRecording) return '#c4736a'
+    if (pipelineState === 'generatingResponse') return '#4a6741'
+    if (pipelineState === 'playingTTS') return '#5b7fa6'
+    if (isProcessing) return '#8aafc8'
+    return '#1c1a17'
+  }, [isRecording, pipelineState, isProcessing])
+
+  const stateLabel = useMemo(() => {
     if (isRecording) return 'Tap to stop'
     if (pipelineState === 'processingSTT') return 'Transcribing…'
     if (pipelineState === 'generatingResponse') return 'Thinking…'
     if (pipelineState === 'playingTTS') return 'Speaking…'
     if (state === 'processing') return 'Processing…'
     return 'Tap to speak'
-  }
+  }, [isRecording, pipelineState, state])
 
-  const getOrbColor = () => {
-    if (isRecording) return '#c4736a'
-    if (pipelineState === 'generatingResponse') return '#4a6741'
-    if (pipelineState === 'playingTTS') return '#5b7fa6'
-    if (isProcessing) return '#8aafc8'
-    return '#1c1a17'
-  }
+  // Memoize audio level bars to prevent re-render on every audio level change
+  const audioLevelBars = useMemo(() => {
+    if (!isRecording) return null
+    return (
+      <div style={{
+        display: 'flex',
+        gap: 4,
+        alignItems: 'center',
+        height: 30,
+        animation: 'fadeIn 0.3s ease both',
+      }}>
+        {Array.from({ length: 9 }, (_, i) => {
+          const center = 4
+          const distance = Math.abs(i - center)
+          const baseH = 6
+          const maxAdd = audioLevel * 20
+          const h = baseH + Math.max(0, maxAdd * (1 - distance / center))
+          return (
+            <div key={i} style={{
+              width: 3,
+              height: h,
+              background: 'var(--blush)',
+              borderRadius: 2,
+              transition: 'height 0.12s ease',
+              opacity: 0.7 + (1 - distance / center) * 0.3,
+            }} />
+          )
+        })}
+      </div>
+    )
+  }, [isRecording, audioLevel])
 
   return (
     <div style={{
@@ -82,16 +115,16 @@ export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, di
         {/* Main orb */}
         <button
           onClick={(e) => { ripple(e); onPress() }}
-          disabled={disabled || isProcessing}
+          disabled={disabled}
           className="ripple-host"
           style={{
             width: orbSize,
             height: orbSize,
             borderRadius: '50%',
-            background: getOrbColor(),
+            background: orbColor,
             color: 'var(--parchment)',
             border: 'none',
-            cursor: disabled || isProcessing ? 'default' : 'pointer',
+            cursor: disabled ? 'default' : 'pointer',
             transition: 'background 0.4s ease, transform 0.15s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.4s ease',
             transform: isRecording
               ? `scale(${0.95 + audioLevel * 0.12})`
@@ -121,7 +154,7 @@ export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, di
                 ; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--shadow-card)'
             }
           }}
-          aria-label={getLabel()}
+          aria-label={stateLabel}
         >
           {/* Icon */}
           {isRecording ? (
@@ -159,40 +192,16 @@ export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, di
         transition: 'color 0.3s ease',
         minHeight: '1.4em',
       }}>
-        {getLabel()}
+        {stateLabel}
       </p>
 
       {/* Audio level bars when recording */}
-      {isRecording && (
-        <div style={{
-          display: 'flex',
-          gap: 4,
-          alignItems: 'center',
-          height: 30,
-          animation: 'fadeIn 0.3s ease both',
-        }}>
-          {Array.from({ length: 9 }, (_, i) => {
-            const center = 4
-            const distance = Math.abs(i - center)
-            const baseH = 6
-            const maxAdd = audioLevel * 20
-            const h = baseH + Math.max(0, maxAdd * (1 - distance / center))
-            return (
-              <div key={i} style={{
-                width: 3,
-                height: h,
-                background: 'var(--blush)',
-                borderRadius: 2,
-                transition: 'height 0.08s ease',
-                opacity: 0.7 + (1 - distance / center) * 0.3,
-              }} />
-            )
-          })}
-        </div>
-      )}
+      {audioLevelBars}
     </div>
   )
 }
+
+export default memo(VoiceOrb)
 
 function MicIcon() {
   return (

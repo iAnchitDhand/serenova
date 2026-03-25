@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useCallback } from 'react'
+import { memo, useState, useRef, useCallback, useMemo } from 'react'
 import { VoicePipeline } from '@runanywhere/web'
 import { AudioPlayback } from '@runanywhere/web'
 import VoiceOrb from './VoiceOrb'
@@ -28,8 +28,29 @@ export default function VoiceCompanion() {
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const pipelineRef = useRef<VoicePipeline | null>(null)
+  const audioPlayerRef = useRef<AudioPlayback | null>(null)
+  const streamingTimeoutRef = useRef<number>()
+  const lastStreamUpdateRef = useRef(0)
 
   const { state: recordState, startRecording, stopRecording, audioLevel } = useVoiceRecorder()
+
+  // Debounce streaming text updates to reduce re-renders
+  const updateStreamingText = useCallback((text: string) => {
+    const now = Date.now()
+    // Throttle updates to max 20 times per second
+    if (now - lastStreamUpdateRef.current < 50) {
+      if (streamingTimeoutRef.current) {
+        clearTimeout(streamingTimeoutRef.current)
+      }
+      streamingTimeoutRef.current = window.setTimeout(() => {
+        setStreamingText(text)
+        lastStreamUpdateRef.current = Date.now()
+      }, 50)
+    } else {
+      setStreamingText(text)
+      lastStreamUpdateRef.current = now
+    }
+  }, [])
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
@@ -37,104 +58,119 @@ export default function VoiceCompanion() {
 
   const handlePress = useCallback(async () => {
     if (recordState === 'recording') {
-      // Stop and process
-      const audio = await stopRecording()
-      if (!audio) return
-
+      // Immediately update UI state - don't wait for cleanup
       setError('')
       setPipelineState('processingSTT')
       setStreamingText('')
 
-      try {
-        if (!pipelineRef.current) {
-          pipelineRef.current = new VoicePipeline()
+      // Stop recording in the background
+      stopRecording().then(async (audio) => {
+        if (!audio) {
+          setPipelineState('idle')
+          return
         }
 
-        let userTranscript = ''
-        let aiResponse = ''
+        try {
+          if (!pipelineRef.current) {
+            pipelineRef.current = new VoicePipeline()
+          }
 
-        await pipelineRef.current.processTurn(
-          audio,
-          {
-            systemPrompt: SYSTEM_PROMPT,
-            maxTokens: 120,
-            temperature: 0.72,
-            ttsSpeed: 0.95,
-            sampleRate: 16000,
-          },
-          {
-            onStateChange: (s) => setPipelineState(s),
+          let userTranscript = ''
+          let aiResponse = ''
 
-            onTranscription: (text) => {
-              userTranscript = text
-              if (text.trim()) {
-                const userMsg: Message = {
+          await pipelineRef.current.processTurn(
+            audio,
+            {
+              systemPrompt: SYSTEM_PROMPT,
+              maxTokens: 120,
+              temperature: 0.72,
+              ttsSpeed: 0.95,
+              sampleRate: 16000,
+            },
+            {
+              onStateChange: (s) => setPipelineState(s),
+
+              onTranscription: (text) => {
+                userTranscript = text
+                if (text.trim()) {
+                  const userMsg: Message = {
+                    id: crypto.randomUUID(),
+                    role: 'user',
+                    text,
+                    timestamp: Date.now(),
+                  }
+                  setMessages(prev => [...prev, userMsg])
+                  scrollToBottom()
+                }
+              },
+
+              onResponseToken: (_token, accumulated) => {
+                aiResponse = accumulated
+                updateStreamingText(accumulated)
+              },
+
+              onResponseComplete: (text) => {
+                aiResponse = text
+                setStreamingText('')
+                const mood = inferMoodFromText(userTranscript)
+                const seraMsg: Message = {
                   id: crypto.randomUUID(),
-                  role: 'user',
+                  role: 'sera',
                   text,
+                  mood,
                   timestamp: Date.now(),
                 }
-                setMessages(prev => [...prev, userMsg])
+                setMessages(prev => [...prev, seraMsg])
                 scrollToBottom()
-              }
-            },
 
-            onResponseToken: (_token, accumulated) => {
-              aiResponse = accumulated
-              setStreamingText(accumulated)
-            },
+                // Save to mood history
+                if (userTranscript.trim()) {
+                  saveMoodEntry({
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                    mood,
+                    transcript: userTranscript,
+                    aiResponse: text,
+                    moodLabel: MOOD_LABELS[mood],
+                  })
+                }
+              },
 
-            onResponseComplete: (text) => {
-              aiResponse = text
-              setStreamingText('')
-              const mood = inferMoodFromText(userTranscript)
-              const seraMsg: Message = {
-                id: crypto.randomUUID(),
-                role: 'sera',
-                text,
-                mood,
-                timestamp: Date.now(),
-              }
-              setMessages(prev => [...prev, seraMsg])
-              scrollToBottom()
-
-              // Save to mood history
-              if (userTranscript.trim()) {
-                saveMoodEntry({
-                  id: crypto.randomUUID(),
-                  timestamp: Date.now(),
-                  mood,
-                  transcript: userTranscript,
-                  aiResponse: text,
-                  moodLabel: MOOD_LABELS[mood],
-                })
-              }
-            },
-
-            onSynthesisComplete: async (audioData, sampleRate) => {
-              try {
-                const player = new AudioPlayback({ sampleRate })
-                await player.play(audioData, sampleRate)
-                player.dispose()
-              } catch (e) {
-                console.warn('TTS playback failed:', e)
-              }
-            },
-          }
-        )
-      } catch (err) {
-        console.error('Pipeline error:', err)
-        setError('Something went wrong. Please try again.')
-        setStreamingText('')
-      } finally {
+              onSynthesisComplete: async (audioData, sampleRate) => {
+                try {
+                  // Reuse audio player instance for better performance
+                  if (!audioPlayerRef.current) {
+                    audioPlayerRef.current = new AudioPlayback({ sampleRate })
+                  }
+                  await audioPlayerRef.current.play(audioData, sampleRate)
+                } catch (e) {
+                  console.warn('TTS playback failed:', e)
+                }
+              },
+            }
+          )
+        } catch (err) {
+          console.error('Pipeline error:', err)
+          setError('Something went wrong. Please try again.')
+          setStreamingText('')
+        } finally {
+          setPipelineState('idle')
+        }
+      }).catch((err) => {
+        console.error('Recording stop error:', err)
         setPipelineState('idle')
-      }
+      })
     } else if (recordState === 'idle' && pipelineState === 'idle') {
       await startRecording()
     }
-  }, [recordState, pipelineState, startRecording, stopRecording, scrollToBottom])
+  }, [recordState, pipelineState, startRecording, stopRecording, scrollToBottom, updateStreamingText])
 
   const isActive = recordState !== 'idle' || pipelineState !== 'idle'
+
+  // Memoize expensive renders
+  const messagesContent = useMemo(() => (
+    messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
+  ), [messages])
 
   return (
     <div style={{
@@ -151,9 +187,7 @@ export default function VoiceCompanion() {
         flexDirection: 'column',
         gap: '0.75rem',
       }}>
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
+        {messagesContent}
 
         {/* Streaming text */}
         {streamingText && (

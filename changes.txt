@@ -1,0 +1,4 @@
+Full screen
+make it faster
+make bubble popping working
+make sounds working on loop

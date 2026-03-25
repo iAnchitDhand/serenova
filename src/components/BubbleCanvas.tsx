@@ -110,10 +110,9 @@ export default function BubbleCanvas() {
         const canvas = canvasRef.current
         if (!canvas) return
         const rect = canvas.getBoundingClientRect()
-        const scaleX = canvas.width / rect.width
-        const scaleY = canvas.height / rect.height
-        const cx = (e.clientX - rect.left) * scaleX
-        const cy = (e.clientY - rect.top) * scaleY
+        // Keep hit-testing in CSS pixel space to match drawing coordinates.
+        const cx = e.clientX - rect.left
+        const cy = e.clientY - rect.top
 
         let popped = false
         // Pop bubble under cursor (topmost first)
@@ -141,7 +140,8 @@ export default function BubbleCanvas() {
         const resize = () => {
             canvas.width = canvas.offsetWidth * devicePixelRatio
             canvas.height = canvas.offsetHeight * devicePixelRatio
-            ctx.scale(devicePixelRatio, devicePixelRatio)
+            // Reset transform before applying DPR scale to avoid compounding on repeated resizes.
+            ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0)
         }
         resize()
         window.addEventListener('resize', resize)

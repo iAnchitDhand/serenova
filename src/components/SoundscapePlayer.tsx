@@ -303,25 +303,75 @@ export default function SoundscapePlayer() {
     const [volume, setVolume] = useState(0.6)
     const [fading, setFading] = useState(false)
     const audioRef = useRef<RelaxAudio | null>(null)
+    const startTimeoutRef = useRef<number | null>(null)
+    const disposeTimeoutRef = useRef<number | null>(null)
+    const playRequestRef = useRef(0)
+    const unmountedRef = useRef(false)
     const ripple = useRipple('rgba(255,255,255,0.25)')
 
     const play = useCallback(async (id: string) => {
-        // Stop existing
-        if (audioRef.current) {
-            audioRef.current.fadeOut(1)
-            setTimeout(() => { audioRef.current?.dispose(); audioRef.current = null }, 1200)
+        playRequestRef.current += 1
+        const requestId = playRequestRef.current
+
+        if (startTimeoutRef.current !== null) {
+            window.clearTimeout(startTimeoutRef.current)
+            startTimeoutRef.current = null
         }
-        if (active === id) { setActive(null); return }
+        if (disposeTimeoutRef.current !== null) {
+            window.clearTimeout(disposeTimeoutRef.current)
+            disposeTimeoutRef.current = null
+        }
+
+        // Toggle off currently active track.
+        if (active === id) {
+            const currentAudio = audioRef.current
+            if (currentAudio) {
+                currentAudio.fadeOut(1)
+                disposeTimeoutRef.current = window.setTimeout(() => {
+                    if (audioRef.current === currentAudio) {
+                        audioRef.current.dispose()
+                        audioRef.current = null
+                    }
+                }, 1200)
+            }
+            setActive(null)
+            setFading(false)
+            return
+        }
+
+        const previousAudio = audioRef.current
+        if (previousAudio) {
+            previousAudio.fadeOut(1)
+            disposeTimeoutRef.current = window.setTimeout(() => {
+                if (audioRef.current === previousAudio) {
+                    audioRef.current.dispose()
+                    audioRef.current = null
+                }
+            }, 1200)
+        }
 
         setFading(true)
-        setTimeout(async () => {
+        startTimeoutRef.current = window.setTimeout(async () => {
+            if (unmountedRef.current || requestId !== playRequestRef.current) return
+
             const audio = new RelaxAudio()
             if (audio.ctx.state === 'suspended') await audio.ctx.resume()
+
+            if (unmountedRef.current || requestId !== playRequestRef.current) {
+                audio.dispose()
+                return
+            }
+
             buildTrack(audio, id)
             audio.fadeIn(volume)
+
+            if (audioRef.current && audioRef.current !== previousAudio) {
+                audioRef.current.dispose()
+            }
             audioRef.current = audio
             setActive(id)
             setFading(false)
+            startTimeoutRef.current = null
         }, active ? 1000 : 0)
     }, [active, volume])
 
@@ -333,7 +383,19 @@ export default function SoundscapePlayer() {
         }
     }, [volume])
 
-    useEffect(() => () => { audioRef.current?.dispose() }, [])
+    useEffect(() => {
+        return () => {
+            unmountedRef.current = true
+            if (startTimeoutRef.current !== null) {
+                window.clearTimeout(startTimeoutRef.current)
+            }
+            if (disposeTimeoutRef.current !== null) {
+                window.clearTimeout(disposeTimeoutRef.current)
+            }
+            audioRef.current?.dispose()
+            audioRef.current = null
+        }
+    }, [])
 
     return (
         <div style={{ animation: 'fadeIn 0.4s ease both' }}>

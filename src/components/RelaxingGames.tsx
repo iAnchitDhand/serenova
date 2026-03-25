@@ -25,8 +25,91 @@ function ZenGarden() {
     const lastPos = useRef<{ x: number, y: number } | null>(null)
     const linesRef = useRef<{ pts: { x: number, y: number }[], color: string }[]>([])
     const currentLine = useRef<{ pts: { x: number, y: number }[], color: string } | null>(null)
+    const textureCanvasRef = useRef<HTMLCanvasElement | null>(null)
+    const audioCtxRef = useRef<AudioContext | null>(null)
+    const scratchNoiseRef = useRef<AudioBufferSourceNode | null>(null)
+    const scratchGainRef = useRef<GainNode | null>(null)
+    const scratchFilterRef = useRef<BiquadFilterNode | null>(null)
+    const lastScratchAtRef = useRef(0)
     const colors = ['#c8a882', '#8b7ec8', '#4a6741', '#5b7fa6', '#c4736a', '#d4a53a']
     const colorIdx = useRef(0)
+
+    const ensureScratchAudio = useCallback(async () => {
+        if (!audioCtxRef.current) {
+            audioCtxRef.current = new AudioContext()
+        }
+        const ctx = audioCtxRef.current
+        if (ctx.state === 'suspended') {
+            await ctx.resume()
+        }
+        if (!scratchNoiseRef.current || !scratchGainRef.current || !scratchFilterRef.current) {
+            const bufLen = ctx.sampleRate * 2
+            const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate)
+            const data = buf.getChannelData(0)
+            let brown = 0
+            for (let i = 0; i < bufLen; i++) {
+                const white = Math.random() * 2 - 1
+                brown = (brown + 0.02 * white) / 1.02
+                data[i] = brown * 1.8
+            }
+
+            const src = ctx.createBufferSource()
+            src.buffer = buf
+            src.loop = true
+
+            const hp = ctx.createBiquadFilter()
+            hp.type = 'highpass'
+            hp.frequency.value = 260
+
+            const bp = ctx.createBiquadFilter()
+            bp.type = 'bandpass'
+            bp.frequency.value = 1800
+            bp.Q.value = 0.6
+
+            const g = ctx.createGain()
+            g.gain.value = 0
+
+            src.connect(hp)
+            hp.connect(bp)
+            bp.connect(g)
+            g.connect(ctx.destination)
+
+            src.start()
+
+            scratchNoiseRef.current = src
+            scratchGainRef.current = g
+            scratchFilterRef.current = bp
+        }
+
+        return {
+            ctx,
+            gain: scratchGainRef.current,
+            filter: scratchFilterRef.current,
+        }
+    }, [])
+
+    const setScratchIntensity = useCallback(async (speed: number) => {
+        const chain = await ensureScratchAudio()
+        if (!chain.gain || !chain.filter) return
+        const now = chain.ctx.currentTime
+        const vol = Math.min(0.09, 0.012 + speed * 0.0012)
+        const freq = Math.min(2800, 900 + speed * 24)
+
+        chain.gain.gain.cancelScheduledValues(now)
+        chain.gain.gain.setTargetAtTime(vol, now, 0.018)
+
+        chain.filter.frequency.cancelScheduledValues(now)
+        chain.filter.frequency.setTargetAtTime(freq, now, 0.025)
+    }, [ensureScratchAudio])
+
+    const stopScratch = useCallback(() => {
+        const ctx = audioCtxRef.current
+        const gain = scratchGainRef.current
+        if (!ctx || !gain) return
+        const now = ctx.currentTime
+        gain.gain.cancelScheduledValues(now)
+        gain.gain.setTargetAtTime(0, now, 0.04)
+    }, [])
 
     const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
         const rect = canvas.getBoundingClientRect()
@@ -45,38 +128,96 @@ function ZenGarden() {
         const resize = () => {
             canvas.width = canvas.offsetWidth * devicePixelRatio
             canvas.height = canvas.offsetHeight * devicePixelRatio
+
+            const tCanvas = document.createElement('canvas')
+            tCanvas.width = canvas.width
+            tCanvas.height = canvas.height
+            const tctx = tCanvas.getContext('2d')!
+
+            tctx.fillStyle = '#f0e8d4'
+            tctx.fillRect(0, 0, tCanvas.width, tCanvas.height)
+
+            // Dense grain for sandpaper look.
+            for (let i = 0; i < 3200; i++) {
+                const alpha = 0.03 + Math.random() * 0.06
+                const warm = 120 + Math.floor(Math.random() * 30)
+                tctx.fillStyle = `rgba(${warm},${95 + Math.floor(Math.random() * 25)},${60 + Math.floor(Math.random() * 20)},${alpha})`
+                const x = Math.random() * tCanvas.width
+                const y = Math.random() * tCanvas.height
+                const s = 0.8 + Math.random() * 1.9
+                tctx.fillRect(x, y, s, s)
+            }
+
+            // Directional micro-streaks to mimic abrasive paper fibers.
+            tctx.strokeStyle = 'rgba(140,110,75,0.06)'
+            tctx.lineWidth = 1
+            for (let i = 0; i < 700; i++) {
+                const x = Math.random() * tCanvas.width
+                const y = Math.random() * tCanvas.height
+                const len = 4 + Math.random() * 9
+                const angle = (Math.random() - 0.5) * 0.9
+                tctx.beginPath()
+                tctx.moveTo(x, y)
+                tctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len)
+                tctx.stroke()
+            }
+
+            textureCanvasRef.current = tCanvas
         }
         resize()
         const redraw = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height)
-            // Sand texture
-            ctx.fillStyle = '#f0e8d4'
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
-            // Subtle grain
-            for (let i = 0; i < 300; i++) {
-                ctx.fillStyle = `rgba(160,120,70,${0.02 + Math.random() * 0.04})`
-                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2)
+            if (textureCanvasRef.current) {
+                ctx.drawImage(textureCanvasRef.current, 0, 0)
+            } else {
+                ctx.fillStyle = '#f0e8d4'
+                ctx.fillRect(0, 0, canvas.width, canvas.height)
             }
             // Draw lines as raked sand grooves
             ;[...linesRef.current, ...(currentLine.current ? [currentLine.current] : [])].forEach(line => {
                 if (line.pts.length < 2) return
                 ctx.save()
                 ctx.strokeStyle = line.color
-                ctx.lineWidth = 6
+                ctx.lineWidth = 7
                 ctx.lineCap = 'round'
                 ctx.lineJoin = 'round'
-                ctx.globalAlpha = 0.55
+                ctx.globalAlpha = 0.5
                 ctx.beginPath()
                 ctx.moveTo(line.pts[0].x, line.pts[0].y)
                 line.pts.forEach(p => ctx.lineTo(p.x, p.y))
                 ctx.stroke()
-                // Parallel grooves
-                ctx.lineWidth = 2; ctx.globalAlpha = 0.25
+
+                // Abrasive etched edge lines.
+                ctx.lineWidth = 2
+                ctx.globalAlpha = 0.26
                 for (const off of [-8, 8]) {
                     ctx.beginPath()
                     const dx = 0, dy = off
                     ctx.moveTo(line.pts[0].x + dx, line.pts[0].y + dy)
                     line.pts.forEach(p => ctx.lineTo(p.x + dx, p.y + dy))
+                    ctx.stroke()
+                }
+
+                // Sandpaper scratch marks based on local segment direction.
+                ctx.strokeStyle = 'rgba(120,92,62,0.18)'
+                ctx.lineWidth = 1
+                ctx.globalAlpha = 0.35
+                for (let i = 1; i < line.pts.length; i++) {
+                    const a = line.pts[i - 1]
+                    const b = line.pts[i]
+                    const dx = b.x - a.x
+                    const dy = b.y - a.y
+                    const len = Math.hypot(dx, dy)
+                    if (len < 6) continue
+                    const nx = -dy / len
+                    const ny = dx / len
+                    const mx = (a.x + b.x) * 0.5
+                    const my = (a.y + b.y) * 0.5
+                    const half = 2 + Math.min(7, len * 0.25)
+
+                    ctx.beginPath()
+                    ctx.moveTo(mx - nx * half, my - ny * half)
+                    ctx.lineTo(mx + nx * half, my + ny * half)
                     ctx.stroke()
                 }
                 ctx.restore()
@@ -86,7 +227,27 @@ function ZenGarden() {
         const obs = new MutationObserver(redraw)
         // Redraw whenever lines change — use a simple interval
         const intv = setInterval(redraw, 50)
-        return () => { clearInterval(intv) }
+        return () => {
+            clearInterval(intv)
+            stopScratch()
+            if (scratchNoiseRef.current) {
+                try { scratchNoiseRef.current.stop() } catch { }
+                scratchNoiseRef.current.disconnect()
+                scratchNoiseRef.current = null
+            }
+            if (scratchGainRef.current) {
+                scratchGainRef.current.disconnect()
+                scratchGainRef.current = null
+            }
+            if (scratchFilterRef.current) {
+                scratchFilterRef.current.disconnect()
+                scratchFilterRef.current = null
+            }
+            if (audioCtxRef.current) {
+                audioCtxRef.current.close().catch(() => undefined)
+                audioCtxRef.current = null
+            }
+        }
     }, [])
 
     const start = (e: React.MouseEvent | React.TouchEvent) => {
@@ -96,13 +257,24 @@ function ZenGarden() {
         colorIdx.current = (colorIdx.current + 1) % colors.length
         currentLine.current = { pts: [pos], color: colors[colorIdx.current] }
         lastPos.current = pos
+        void ensureScratchAudio()
+        void setScratchIntensity(14)
+        lastScratchAtRef.current = performance.now()
     }
     const move = (e: React.MouseEvent | React.TouchEvent) => {
         if (!drawing.current || !currentLine.current) return
         e.preventDefault()
         const pos = getPos(e, canvasRef.current!)
+        const prev = currentLine.current.pts[currentLine.current.pts.length - 1]
         currentLine.current.pts.push(pos)
         lastPos.current = pos
+
+        const dist = Math.hypot(pos.x - prev.x, pos.y - prev.y)
+        const now = performance.now()
+        const dt = Math.max(8, now - lastScratchAtRef.current)
+        lastScratchAtRef.current = now
+        const speed = dist / (dt / 16.67)
+        void setScratchIntensity(speed)
     }
     const end = () => {
         if (currentLine.current && currentLine.current.pts.length > 1) {
@@ -110,6 +282,7 @@ function ZenGarden() {
         }
         currentLine.current = null
         drawing.current = false
+        stopScratch()
     }
 
     return (
@@ -148,7 +321,7 @@ function CalmPairs() {
     const [won, setWon] = useState(false)
     const ripple = useRipple('rgba(255,255,255,0.3)')
 
-    const flip = useCallback((e: React.MouseEvent, id: number) => {
+    const flip = useCallback((e: React.MouseEvent<HTMLElement>, id: number) => {
         ripple(e)
         if (locked) return
         const card = cards.find(c => c.id === id)
