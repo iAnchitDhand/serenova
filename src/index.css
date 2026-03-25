@@ -21,15 +21,21 @@
   --sky-light: #8aafc8;
   --blush: #c4736a;
   --amber: #d4a53a;
+  --lavender: #8b7ec8;
+  --rose: #d4899a;
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
   --radius-xl: 36px;
   --shadow-soft: 0 2px 16px rgba(28, 26, 23, 0.08);
   --shadow-card: 0 4px 32px rgba(28, 26, 23, 0.12);
+  --shadow-glow-sand: 0 0 32px rgba(200, 168, 130, 0.35);
+  --shadow-glow-sky: 0 0 32px rgba(91, 127, 166, 0.35);
+  --shadow-glow-moss: 0 0 32px rgba(74, 103, 65, 0.3);
   --font-serif: 'DM Serif Display', Georgia, serif;
   --font-sans: 'DM Sans', system-ui, sans-serif;
-  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html,
@@ -41,22 +47,86 @@ body {
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
 
 #root {
   height: 100%;
 }
 
-button {
-  font-family: var(--font-sans);
-  cursor: pointer;
-  border: none;
-  outline: none;
+/* ── Custom cursor ─────────────────────── */
+* {
+  cursor: inherit;
 }
 
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+a,
+button,
+[role="button"],
+label[for] {
+  cursor: pointer;
+}
+
+/* ── Ripple system ─────────────────────── */
+.ripple-host {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-circle {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-expand 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes ripple-expand {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* ── Hover lift cards ──────────────────── */
+.hover-lift {
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card);
+}
+
+.hover-lift:active {
+  transform: translateY(-1px);
+}
+
+/* ── Glow buttons ──────────────────────── */
+.btn-glow {
+  transition: transform var(--transition), box-shadow var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0);
+  transition: background 0.2s ease;
+  border-radius: inherit;
+}
+
+.btn-glow:hover::after {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-glow:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn-glow:active {
+  transform: scale(0.97);
 }
 
 /* Scrollbar */
@@ -73,11 +143,11 @@ button:disabled {
   border-radius: 2px;
 }
 
-/* Animations */
+/* ── Keyframes ─────────────────────────── */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
 
   to {
@@ -86,15 +156,39 @@ button:disabled {
   }
 }
 
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(24px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
@@ -107,7 +201,7 @@ button:disabled {
   }
 
   50% {
-    transform: scale(1.06);
+    transform: scale(1.07);
     opacity: 0.85;
   }
 }
@@ -120,18 +214,18 @@ button:disabled {
   }
 
   50% {
-    transform: scale(1.08);
+    transform: scale(1.10);
   }
 }
 
 @keyframes ripple {
   0% {
     transform: scale(0.8);
-    opacity: 1;
+    opacity: 0.9;
   }
 
   100% {
-    transform: scale(2.4);
+    transform: scale(2.8);
     opacity: 0;
   }
 }
@@ -140,17 +234,74 @@ button:disabled {
 
   0%,
   100% {
-    height: 6px;
+    height: 5px;
   }
 
   50% {
-    height: 22px;
+    height: 24px;
   }
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes floatSlow {
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(3deg);
+  }
+}
+
+@keyframes bubbleRise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
+  }
+
+  80% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateY(-120px) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes bubblePop {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  40% {
+    transform: scale(1.35);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(0);
+    opacity: 0;
   }
 }
 
@@ -164,15 +315,125 @@ button:disabled {
   }
 }
 
-@keyframes float {
+@keyframes glowPulse {
 
   0%,
   100% {
-    transform: translateY(0px);
+    box-shadow: 0 0 16px rgba(200, 168, 130, 0.2);
   }
 
   50% {
-    transform: translateY(-6px);
+    box-shadow: 0 0 40px rgba(200, 168, 130, 0.5);
+  }
+}
+
+@keyframes orbGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(91, 127, 166, 0.3), var(--shadow-card);
+  }
+
+  50% {
+    box-shadow: 0 0 60px rgba(91, 127, 166, 0.5), var(--shadow-card);
+  }
+}
+
+@keyframes starTwinkle {
+
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes noteFloat {
+  0% {
+    transform: translateY(0) rotate(-5deg);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateY(-80px) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes dropletFall {
+  0% {
+    transform: translateY(-20px) scaleY(1.2);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.8;
+  }
+
+  80% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateY(200px) scaleY(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes waveFlow {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes colorShift {
+
+  0%,
+  100% {
+    filter: hue-rotate(0deg);
+  }
+
+  50% {
+    filter: hue-rotate(30deg);
+  }
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tabBounce {
+  0% {
+    transform: translateY(0);
+  }
+
+  40% {
+    transform: translateY(-5px);
+  }
+
+  70% {
+    transform: translateY(-2px);
+  }
+
+  100% {
+    transform: translateY(0);
   }
 }
 

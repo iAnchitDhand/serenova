@@ -1,4 +1,5 @@
 import { type RecordingState } from '../hooks/useVoiceRecorder'
+import { useRipple } from '../hooks/useRipple'
 
 interface Props {
   state: RecordingState
@@ -11,6 +12,7 @@ interface Props {
 export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, disabled }: Props) {
   const isRecording = state === 'recording'
   const isProcessing = state === 'processing' || pipelineState !== 'idle'
+  const ripple = useRipple('rgba(245,240,232,0.35)')
 
   const orbSize = 120
   const rippleScale = isRecording ? 1 + audioLevel * 0.5 : 1
@@ -79,8 +81,9 @@ export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, di
 
         {/* Main orb */}
         <button
-          onClick={onPress}
+          onClick={(e) => { ripple(e); onPress() }}
           disabled={disabled || isProcessing}
+          className="ripple-host"
           style={{
             width: orbSize,
             height: orbSize,
@@ -89,13 +92,15 @@ export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, di
             color: 'var(--parchment)',
             border: 'none',
             cursor: disabled || isProcessing ? 'default' : 'pointer',
-            transition: 'background 0.4s ease, transform 0.15s ease, box-shadow 0.3s ease',
+            transition: 'background 0.4s ease, transform 0.15s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.4s ease',
             transform: isRecording
               ? `scale(${0.95 + audioLevel * 0.12})`
               : 'scale(1)',
             boxShadow: isRecording
-              ? `0 0 0 ${Math.round(audioLevel * 20)}px rgba(196,115,106,0.1), var(--shadow-card)`
-              : 'var(--shadow-card)',
+              ? `0 0 0 ${Math.round(audioLevel * 20)}px rgba(196,115,106,0.1), var(--shadow-card), 0 0 40px rgba(196,115,106,0.3)`
+              : pipelineState === 'playingTTS'
+                ? 'var(--shadow-glow-sky), var(--shadow-card)'
+                : 'var(--shadow-card)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -103,6 +108,18 @@ export default function VoiceOrb({ state, audioLevel, pipelineState, onPress, di
             gap: '0.2rem',
             position: 'relative',
             zIndex: 1,
+          }}
+          onMouseEnter={e => {
+            if (!isRecording && !isProcessing) {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.06)'
+                ; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--shadow-card), 0 0 28px rgba(200,168,130,0.3)'
+            }
+          }}
+          onMouseLeave={e => {
+            if (!isRecording) {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
+                ; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--shadow-card)'
+            }
           }}
           aria-label={getLabel()}
         >

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveBreathingSession, type BreathingSession } from '../lib/storage'
+import { useRipple } from '../hooks/useRipple'
 
 type ExerciseType = 'box' | '478' | 'calm'
 
@@ -57,6 +58,7 @@ export default function BreathingExercise() {
   const [sessions, setSessions] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startTimeRef = useRef<number>(0)
+  const ripple = useRipple('rgba(255,255,255,0.25)')
 
   useEffect(() => {
     const raw = localStorage.getItem('serenova_breathing')
@@ -352,7 +354,8 @@ export default function BreathingExercise() {
         {EXERCISES.map(ex => (
           <button
             key={ex.id}
-            onClick={() => startExercise(ex)}
+            onClick={(e) => { ripple(e); startExercise(ex) }}
+            className="ripple-host"
             style={{
               background: 'white',
               borderRadius: 'var(--radius-lg)',
