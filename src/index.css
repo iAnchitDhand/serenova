@@ -29,13 +29,9 @@
   --radius-xl: 36px;
   --shadow-soft: 0 2px 16px rgba(28, 26, 23, 0.08);
   --shadow-card: 0 4px 32px rgba(28, 26, 23, 0.12);
-  --shadow-glow-sand: 0 0 32px rgba(200, 168, 130, 0.35);
-  --shadow-glow-sky: 0 0 32px rgba(91, 127, 166, 0.35);
-  --shadow-glow-moss: 0 0 32px rgba(74, 103, 65, 0.3);
   --font-serif: 'DM Serif Display', Georgia, serif;
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --transition: 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html,

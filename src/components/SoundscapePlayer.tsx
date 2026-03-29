@@ -302,21 +302,41 @@ export default function SoundscapePlayer() {
     const [active, setActive] = useState<string | null>(null)
     const [volume, setVolume] = useState(0.6)
     const [fading, setFading] = useState(false)
+    const [audioInitialized, setAudioInitialized] = useState(false)
+    const [audioSupported, setAudioSupported] = useState(true)
     const audioRef = useRef<RelaxAudio | null>(null)
-    const startTimeoutRef = useRef<number | null>(null)
     const disposeTimeoutRef = useRef<number | null>(null)
-    const playRequestRef = useRef(0)
-    const unmountedRef = useRef(false)
     const ripple = useRipple('rgba(255,255,255,0.25)')
 
-    const play = useCallback(async (id: string) => {
-        playRequestRef.current += 1
-        const requestId = playRequestRef.current
-
-        if (startTimeoutRef.current !== null) {
-            window.clearTimeout(startTimeoutRef.current)
-            startTimeoutRef.current = null
+    // Check browser support on mount
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.AudioContext) {
+            setAudioSupported(false)
         }
+    }, [])
+
+    const play = useCallback(async (id: string) => {
+        // Prevent multiple simultaneous plays
+        if (fading) {
+            return
+        }
+
+        // Initialize audio on first interaction
+        if (!audioInitialized) {
+            try {
+                const tempAudio = new RelaxAudio()
+                if (tempAudio.ctx.state === 'suspended') {
+                    await tempAudio.ctx.resume()
+                }
+                tempAudio.dispose()
+                setAudioInitialized(true)
+            } catch (error) {
+                console.error('Failed to initialize audio:', error)
+                return
+            }
+        }
+
+        // Clear existing timeouts
         if (disposeTimeoutRef.current !== null) {
             window.clearTimeout(disposeTimeoutRef.current)
             disposeTimeoutRef.current = null
@@ -339,6 +359,7 @@ export default function SoundscapePlayer() {
             return
         }
 
+        // Stop previous track
         const previousAudio = audioRef.current
         if (previousAudio) {
             previousAudio.fadeOut(1)
@@ -351,18 +372,20 @@ export default function SoundscapePlayer() {
         }
 
         setFading(true)
-        startTimeoutRef.current = window.setTimeout(async () => {
-            if (unmountedRef.current || requestId !== playRequestRef.current) return
-
+        
+        // Start new track immediately (no delay for simplicity)
+        try {
             const audio = new RelaxAudio()
-            if (audio.ctx.state === 'suspended') await audio.ctx.resume()
-
-            if (unmountedRef.current || requestId !== playRequestRef.current) {
-                audio.dispose()
-                return
+            
+            // Handle AudioContext suspension
+            if (audio.ctx.state === 'suspended') {
+                await audio.ctx.resume()
             }
-
+            
+            // Build the actual track
             buildTrack(audio, id)
+            
+            // Start with a gentle fade in
             audio.fadeIn(volume)
 
             if (audioRef.current && audioRef.current !== previousAudio) {
@@ -371,9 +394,11 @@ export default function SoundscapePlayer() {
             audioRef.current = audio
             setActive(id)
             setFading(false)
-            startTimeoutRef.current = null
-        }, active ? 1000 : 0)
-    }, [active, volume])
+        } catch (error) {
+            console.error('Error playing soundscape:', error)
+            setFading(false)
+        }
+    }, [active, volume, audioInitialized, fading, audioSupported])
 
     // Volume change
     useEffect(() => {
@@ -385,10 +410,6 @@ export default function SoundscapePlayer() {
 
     useEffect(() => {
         return () => {
-            unmountedRef.current = true
-            if (startTimeoutRef.current !== null) {
-                window.clearTimeout(startTimeoutRef.current)
-            }
             if (disposeTimeoutRef.current !== null) {
                 window.clearTimeout(disposeTimeoutRef.current)
             }
@@ -399,6 +420,42 @@ export default function SoundscapePlayer() {
 
     return (
         <div style={{ animation: 'fadeIn 0.4s ease both' }}>
+            {/* Browser compatibility notice */}
+            {!audioSupported && (
+                <div style={{
+                    background: '#fdf0ef',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem 1.25rem',
+                    marginBottom: '1rem',
+                    fontSize: '0.82rem',
+                    color: 'var(--blush)',
+                    textAlign: 'center',
+                }}>
+                    <span>🔇</span>
+                    <span style={{ marginLeft: '0.5rem' }}>
+                        Web Audio API not supported in this browser. Please try a modern browser like Chrome, Firefox, or Safari.
+                    </span>
+                </div>
+            )}
+
+            {/* Audio initialization notice */}
+            {audioSupported && !audioInitialized && (
+                <div style={{
+                    background: '#fdf0ef',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1rem',
+                    fontSize: '0.82rem',
+                    color: 'var(--blush)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                }}>
+                    <span>🔊</span>
+                    <span>Click any soundscape to enable audio</span>
+                </div>
+            )}
+
             {/* Volume control */}
             <div style={{
                 background: 'white',
@@ -409,12 +466,15 @@ export default function SoundscapePlayer() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
+                opacity: audioSupported ? 1 : 0.5,
+                pointerEvents: audioSupported ? 'auto' : 'none',
             }}>
                 <span style={{ fontSize: '1.1rem' }}>🔊</span>
                 <input
                     type="range" min={0} max={1} step={0.01} value={volume}
                     onChange={e => setVolume(+e.target.value)}
                     style={{ flex: 1, accentColor: 'var(--sand-deep)' }}
+                    disabled={!audioSupported}
                 />
                 <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)', minWidth: 28 }}>
                     {Math.round(volume * 100)}%
@@ -464,8 +524,10 @@ export default function SoundscapePlayer() {
                     return (
                         <button
                             key={track.id}
-                            onClick={(e) => { ripple(e); play(track.id) }}
-                            disabled={fading}
+                            onClick={() => { 
+                                play(track.id) 
+                            }}
+                            disabled={fading || !audioSupported}
                             className="ripple-host"
                             style={{
                                 background: isPlaying ? track.color : 'white',
@@ -476,11 +538,11 @@ export default function SoundscapePlayer() {
                                 border: `2px solid ${isPlaying ? track.color : 'transparent'}`,
                                 transform: isPlaying ? 'scale(1.03)' : 'scale(1)',
                                 transition: 'all 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-                                cursor: 'pointer',
-                                opacity: fading ? 0.7 : 1,
+                                cursor: audioSupported ? 'pointer' : 'not-allowed',
+                                opacity: (fading || !audioSupported) ? 0.7 : 1,
                             }}
                             onMouseEnter={e => {
-                                if (!isPlaying) {
+                                if (!isPlaying && audioSupported) {
                                     e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)'
                                     e.currentTarget.style.boxShadow = `var(--shadow-card)`
                                 }

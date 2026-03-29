@@ -16,6 +16,11 @@ const AFFIRMATIONS = [
   "You matter more than you know.",
   "Even the darkest night will end, and the sun will rise.",
   "Be patient with yourself. Growth takes time.",
+  "Like the lotus, you can rise through muddy waters and bloom.",
+  "Your inner strength is like a banyan tree - deep and resilient.",
+  "This too shall pass, as the seasons change.",
+  "You carry the wisdom of generations within you.",
+  "Your breath is your anchor in this moment.",
 ]
 
 const GROUNDING = [
@@ -25,11 +30,14 @@ const GROUNDING = [
 ]
 
 const RESOURCES = [
-  { name: '988 Suicide & Crisis Lifeline', detail: 'Call or text 988 (US)', urgent: true },
-  { name: 'Crisis Text Line', detail: 'Text HOME to 741741', urgent: true },
-  { name: 'SAMHSA Helpline', detail: '1-800-662-4357 · Free, confidential', urgent: false },
-  { name: 'International Association for Suicide Prevention', detail: 'iasp.info/resources/Crisis_Centres/', urgent: false },
-  { name: 'Psychology Today Therapist Finder', detail: 'psychologytoday.com/us/therapists', urgent: false },
+  { name: 'iCall (TISS)', detail: '1800-209-4366 · 24/7 mental health helpline', urgent: true },
+  { name: 'Vandrevala Foundation', detail: '1860-266-2345 · Free, confidential counseling', urgent: true },
+  { name: 'Snehi Foundation', detail: '91-98216-27774 · Emotional support helpline', urgent: false },
+  { name: 'Parivarthan', detail: '7676602600 · Counseling and support services', urgent: false },
+  { name: 'NIMHANS Helpline', detail: '080-26993201 · Premier mental health institute', urgent: false },
+  { name: 'Fortis Stress Helpline', detail: '91-8376804102 · Mental health support', urgent: false },
+  { name: 'YourDOST', detail: 'yourdost.com · Online counseling platform', urgent: false },
+  { name: 'Mpower', detail: 'mpowerminds.com · Mental health awareness & support', urgent: false },
 ]
 
 export default function ResourcesPanel() {
@@ -215,7 +223,7 @@ export default function ResourcesPanel() {
             fontSize: '0.82rem',
             color: 'var(--ink-soft)',
           }}>
-            <strong>⚕️ Important:</strong> Serenova is a supportive companion, not a mental health provider. If you're in crisis or need clinical support, please reach out to a professional resource below.
+            <strong>⚕️ Important:</strong> Serenova is a supportive companion, not a mental health provider. If you're in crisis or need clinical support, please reach out to one of the trusted Indian mental health resources below. These services are confidential and many are available 24/7.
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>

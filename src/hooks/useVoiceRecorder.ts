@@ -99,7 +99,7 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
       try { await audioCtxRef.current.close() } catch { }
       audioCtxRef.current = null
     }
-    
+
     // Finally stop the media stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop())

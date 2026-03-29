@@ -3,7 +3,7 @@
 
 A voice-first mental health companion that runs **entirely on your device** — no cloud, no servers, no data ever leaves your phone or browser.
 
-Built for HackXtreme using the [RunAnywhere](https://runanywhere.ai) Web SDK.
+Built using the [RunAnywhere](https://runanywhere.ai) Web SDK.
 
 ---
 
@@ -13,7 +13,7 @@ Mental health conversations require absolute privacy. With Serenova:
 
 - 🔒 **Zero data transmission** — All AI inference runs locally via WebAssembly
 - ⚡ **Instant responses** — No network latency; sub-100ms voice response start
-- 📶 **Works offline** — After the first model download, no internet needed
+- 📶 **Works offline** — After first model download, no internet needed
 - 🎙 **Voice-first** — Speak naturally; Sera listens, understands, and responds with her voice
 
 ---
@@ -25,8 +25,10 @@ Mental health conversations require absolute privacy. With Serenova:
 | **Voice Companion** | Full STT → LLM → TTS pipeline running in-browser |
 | **Mood Journal** | Auto-logged mood tracking from voice check-ins |
 | **Breathing Exercises** | Box breathing, 4-7-8, and calm breathing with animated guides |
-| **Affirmations** | Curated affirmations and grounding techniques |
-| **Crisis Resources** | Direct links to 988, Crisis Text Line, and SAMHSA |
+| **Soundscapes** | 8 ambient soundscapes for relaxation (rain, forest, ocean, fire, wind, crystal, lullaby, space) |
+| **Relaxing Games** | Interactive calming activities (Zen Garden, Calm Pairs memory game, Color Mandalas, Ripple Pool) |
+| **Affirmations** | Curated affirmations with culturally relevant content for Indian users |
+| **Crisis Resources** | India-specific mental health helplines and support services |
 
 ---
 
@@ -101,16 +103,42 @@ src/
 │   ├── VoiceOrb.tsx         # Animated recording button
 │   ├── MoodHistory.tsx      # Mood journal & sparkline chart
 │   ├── BreathingExercise.tsx# Animated breathing guides
+│   ├── SoundscapePlayer.tsx  # Ambient soundscape player with 8 tracks
+│   ├── RelaxingGames.tsx   # Interactive calming activities
+│   │   ├── ZenGarden     # Sand drawing with audio feedback
+│   ├── CalmPairs      # Memory matching game
+│   ├── ColorMandalas   # Interactive mandala creation
+│   └── RipplePool     # Water ripple effects
 │   └── ResourcesPanel.tsx   # Affirmations, grounding, crisis help
 ├── hooks/
-│   └── useVoiceRecorder.ts  # AudioCapture wrapper hook
+│   ├── useVoiceRecorder.ts  # AudioCapture wrapper hook
+│   └── useRipple.ts        # Ripple effect for UI interactions
 ├── lib/
 │   ├── runanywhere.ts       # SDK initialization & model loading
 │   ├── storage.ts           # localStorage mood persistence
 │   └── prompts.ts           # LLM system prompt for Sera
-├── App.tsx                  # Root layout + navigation
+├── App.tsx                  # Root layout with full-page navigation
 └── main.tsx                 # Entry point
 ```
+
+---
+
+## India-Specific Features
+
+### Localized Resources
+The app includes India-specific mental health resources:
+- **iCall (TISS)** - 1800-209-4366 (24/7 helpline)
+- **Vandrevala Foundation** - 1860-266-2345 (Free counseling)
+- **Snehi Foundation** - 91-98216-27774 (Emotional support)
+- **NIMHANS Helpline** - 080-26993201 (Premier institute)
+- **Fortis Stress Helpline** - 91-8376804102 (Mental health support)
+- **YourDOST** - Online counseling platform
+- **Mpower** - Mental health awareness & support
+
+### Cultural Adaptations
+- Culturally relevant affirmations including lotus and banyan tree metaphors
+- Localized crisis resource information
+- Contextual messaging for Indian users
 
 ---
 
@@ -118,12 +146,28 @@ src/
 
 Serenova is a supportive companion tool, **not a medical device or licensed therapist**. It is not a substitute for professional mental health care. If you or someone you know is in crisis, please contact:
 
-- **988 Suicide & Crisis Lifeline** — Call or text 988 (US)
-- **Crisis Text Line** — Text HOME to 741741
-- **Emergency services** — 911 or your local equivalent
+### Emergency Resources (India)
+- **iCall (TISS)** - 1800-209-4366 (24/7 mental health helpline)
+- **Vandrevala Foundation** - 1860-266-2345 (Free, confidential counseling)
+- **Emergency Services** - 112 or your local emergency number
 
 ---
 
-## License
+## Development Notes
 
-MIT © HackXtreme 2026
+### Code Quality
+- All debug statements removed for production
+- Unused variables and functions eliminated
+- TypeScript strict mode enabled
+- Component memoization for performance
+
+### Browser Compatibility
+- Chrome 120+ and Edge 120+ supported
+- WebAudio API with proper fallback handling
+- Responsive design for mobile and desktop
+
+### Performance
+- Lazy loading of AI models
+- Optimized audio context management
+- Efficient canvas rendering with requestAnimationFrame
+- Minimal bundle size through tree shaking

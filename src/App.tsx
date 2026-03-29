@@ -107,10 +107,10 @@ export default function App() {
 
   const scrollToSection = useCallback((index: number) => {
     if (isScrolling || index < 0 || index >= TABS.length) return
-    
+
     setIsScrolling(true)
     setCurrentSection(index)
-    
+
     setTimeout(() => setIsScrolling(false), 1000)
   }, [isScrolling])
 
@@ -118,21 +118,32 @@ export default function App() {
     const handleWheel = (e: WheelEvent) => {
       // Check if we're scrolling within a scrollable section
       const target = e.target as HTMLElement
-      const scrollableParent = target.closest('[style*="overflowY"]')
-      
+      const scrollableParent = target.closest('[style*="overflowY: auto"], [style*="overflow-y: auto"], [style*="overflowY: scroll"], [style*="overflow-y: scroll"], .chat-messages-container, [class^="section-content-"]')
+
       // Only prevent default if not inside a scrollable section or at scroll boundaries
-      if (!scrollableParent || 
-          (e.deltaY > 0 && scrollableParent.scrollTop + scrollableParent.clientHeight >= scrollableParent.scrollHeight - 5) ||
-          (e.deltaY < 0 && scrollableParent.scrollTop <= 5)) {
-        e.preventDefault()
+      if (scrollableParent) {
+        const isAtTop = scrollableParent.scrollTop <= 5
+        const isAtBottom = scrollableParent.scrollTop + scrollableParent.clientHeight >= scrollableParent.scrollHeight - 5
         
-        if (isScrolling) return
-        
-        if (e.deltaY > 30) {
-          scrollToSection(currentSection + 1)
-        } else if (e.deltaY < -30) {
-          scrollToSection(currentSection - 1)
+        // Allow scrolling within the content if not at boundaries
+        if ((e.deltaY < 0 && !isAtTop) || (e.deltaY > 0 && !isAtBottom)) {
+          return // Let the content scroll normally
         }
+        
+        // Only prevent default if trying to scroll beyond boundaries
+        if ((e.deltaY < 0 && isAtTop) || (e.deltaY > 0 && isAtBottom)) {
+          e.preventDefault()
+        }
+      } else {
+        e.preventDefault()
+      }
+
+      if (isScrolling) return
+
+      if (e.deltaY > 30) {
+        scrollToSection(currentSection + 1)
+      } else if (e.deltaY < -30) {
+        scrollToSection(currentSection - 1)
       }
     }
 
@@ -153,7 +164,7 @@ export default function App() {
     const handleTouchEnd = (e: TouchEvent) => {
       const touchEndY = e.changedTouches[0].clientY
       const diff = touchStartY.current - touchEndY
-      
+
       if (Math.abs(diff) > 50) {
         if (diff > 0) {
           scrollToSection(currentSection + 1)
@@ -191,10 +202,10 @@ export default function App() {
       background: 'var(--parchment)',
     }}>
       {/* Rotating Mandalas Background */}
-      <div style={{ 
-        position: 'fixed', 
-        inset: 0, 
-        zIndex: 0, 
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
         overflow: 'hidden',
         color: activeColor,
         transition: 'color 1s ease',
@@ -284,19 +295,22 @@ export default function App() {
             padding: '6rem 4rem 4rem',
             position: 'relative',
           }}>
-            <div style={{
-              width: '100%',
-              maxWidth: tab.id === 'talk' ? '900px' : '1200px',
-              height: 'calc(100% - 10rem)',
-              display: 'flex',
-              flexDirection: 'column',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              opacity: currentSection === index ? 1 : 0.3,
-              transform: currentSection === index ? 'scale(1)' : 'scale(0.9)',
-              transition: 'opacity 0.8s ease, transform 0.8s ease',
-              pointerEvents: currentSection === index ? 'auto' : 'none',
-            }}>
+            <div 
+              className={`section-content-${tab.id}`}
+              style={{
+                width: '100%',
+                maxWidth: tab.id === 'talk' ? '900px' : '1200px',
+                height: 'calc(100% - 10rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                opacity: currentSection === index ? 1 : 0.3,
+                transform: currentSection === index ? 'scale(1)' : 'scale(0.9)',
+                transition: 'opacity 0.8s ease, transform 0.8s ease',
+                pointerEvents: currentSection === index ? 'auto' : 'none',
+              }}
+            >
               {tab.id === 'talk' && <VoiceCompanion />}
               {tab.id === 'mood' && <MoodHistory />}
               {tab.id === 'breathe' && <BreathingExercise />}

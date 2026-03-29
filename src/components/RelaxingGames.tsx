@@ -376,12 +376,22 @@ function CalmPairs() {
     )
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '0.5rem 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>Find the matching pairs</p>
                 <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>Moves: {moves}</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.5rem' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(4,1fr)', 
+                gap: '0.3rem',
+                flex: 1,
+                maxHeight: '320px',
+                padding: '0.4rem',
+                background: 'rgba(245,240,232,0.3)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-soft)'
+            }}>
                 {cards.map(card => (
                     <button
                         key={card.id}
@@ -389,15 +399,17 @@ function CalmPairs() {
                         className="ripple-host"
                         style={{
                             aspectRatio: '1',
-                            borderRadius: 'var(--radius-md)',
+                            borderRadius: 'var(--radius-sm)',
                             border: `2px solid ${card.matched ? 'var(--moss)' : 'var(--parchment-mid)'}`,
                             background: card.flipped || card.matched ? 'white' : 'var(--ink)',
-                            fontSize: card.flipped || card.matched ? '1.6rem' : '0',
+                            fontSize: card.flipped || card.matched ? '1.2rem' : '0',
                             transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                             transform: card.matched ? 'scale(0.95)' : 'scale(1)',
                             boxShadow: card.matched ? 'none' : 'var(--shadow-soft)',
                             cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            minHeight: '50px',
+                            maxHeight: '70px',
                         }}
                     >
                         {(card.flipped || card.matched) ? card.emoji : ''}

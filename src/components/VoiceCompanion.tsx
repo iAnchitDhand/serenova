@@ -53,7 +53,16 @@ export default function VoiceCompanion() {
   }, [])
 
   const scrollToBottom = useCallback(() => {
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    // Use requestAnimationFrame for smoother scrolling and better timing
+    requestAnimationFrame(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'end',
+          inline: 'nearest'
+        })
+      }
+    })
   }, [])
 
   const handlePress = useCallback(async () => {
