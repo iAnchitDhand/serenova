@@ -55,7 +55,7 @@ Mental health conversations require absolute privacy. With Serenova:
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/serenova
+git clone https://github.com/ianchitdhand/serenova
 cd serenova
 
 # 2. Install dependencies
