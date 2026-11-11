@@ -86,33 +86,43 @@ export async function downloadAndLoadAllModels(
     return !alreadyLocal
   })
 
-  await Promise.all(
-    toDownload.map((model) =>
-      new Promise<void>((resolve, reject) => {
-        const handler = (evt: { modelId: string; progress?: number }) => {
-          if (evt.modelId === model.id) {
-            onProgress({ modelId: model.id, progress: evt.progress ?? 0, name: model.name })
-          }
+  for (const model of toDownload) {
+    await new Promise<void>((resolve, reject) => {
+      const handler = (evt: { modelId: string; progress?: number }) => {
+        if (evt.modelId === model.id) {
+          onProgress({ modelId: model.id, progress: evt.progress ?? 0, name: model.name })
         }
+      }
 
-        const unsubscribe = EventBus.shared.on('model.downloadProgress', handler)
-        ModelManager.downloadModel(model.id)
-          .then(() => {
-            onProgress({ modelId: model.id, progress: 1, name: model.name })
-            resolve()
-          })
-          .catch((err) => reject(err))
-          .finally(() => unsubscribe())
-      })
-    )
-  )
+      const unsubscribe = EventBus.shared.on('model.downloadProgress', handler)
+      ModelManager.downloadModel(model.id)
+        .then(() => {
+          onProgress({ modelId: model.id, progress: 1, name: model.name })
+          resolve()
+        })
+        .catch((err) => reject(err))
+        .finally(() => unsubscribe())
+    })
+  }
 
   for (const model of VOICE_MODELS) {
     const status = ModelManager.getModels().find(m => m.id === model.id)?.status
     if (status !== 'loaded') {
-      await ModelManager.loadModel(model.id, { coexist: true })
+      const loaded = await ModelManager.loadModel(model.id, { coexist: true })
+      if (!loaded) {
+        throw new Error(
+          `Failed to load ${model.name}. The browser could not keep the voice models in storage, so voice input is unavailable. ` +
+          `Free up site storage or try a fresh browser profile, then load the models again.`
+        )
+      }
     }
     onProgress({ modelId: model.id, progress: 1, name: model.name })
+  }
+
+  if (!areAllModelsLoaded()) {
+    throw new Error(
+      'Voice models did not finish loading. The browser storage quota is likely too small for the full voice stack.'
+    )
   }
 }
 

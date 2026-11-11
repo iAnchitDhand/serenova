@@ -15,6 +15,7 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
   const [audioLevel, setAudioLevel] = useState(0)
   const captureRef = useRef<AudioCapture | null>(null)
   const chunksRef = useRef<Float32Array[]>([])
+  const stoppingRef = useRef(false)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animFrameRef = useRef<number>(0)
   const streamRef = useRef<MediaStream | null>(null)
@@ -52,6 +53,7 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
 
   const startRecording = useCallback(async () => {
     try {
+      stoppingRef.current = false
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
       lastMeterUpdateRef.current = 0
@@ -63,6 +65,7 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
       chunksRef.current = []
 
       await capture.start((chunk: Float32Array) => {
+        if (stoppingRef.current) return
         chunksRef.current.push(chunk.slice())
       })
 
@@ -74,6 +77,9 @@ export function useVoiceRecorder(): UseVoiceRecorderResult {
   }, [startLevelMonitor])
 
   const stopRecording = useCallback(async (): Promise<Float32Array | null> => {
+    stoppingRef.current = true
+    setState('processing')
+
     // Clean up animation frame first
     cancelAnimationFrame(animFrameRef.current)
     setAudioLevel(0)

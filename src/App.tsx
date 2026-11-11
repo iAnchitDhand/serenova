@@ -7,15 +7,17 @@ import ResourcesPanel from './components/ResourcesPanel'
 import BubbleCanvas from './components/BubbleCanvas'
 import SoundscapePlayer from './components/SoundscapePlayer'
 import RelaxingGames from './components/RelaxingGames'
+import PomodoroTimer from './components/PomodoroTimer'
 import { useRipple } from './hooks/useRipple'
 
-type Tab = 'talk' | 'mood' | 'breathe' | 'bubbles' | 'sounds' | 'games' | 'resources'
+type Tab = 'talk' | 'mood' | 'breathe' | 'bubbles' | 'sounds' | 'pomodoro' | 'games' | 'resources'
 
 const TABS: { id: Tab; label: string; icon: string; color: string }[] = [
   { id: 'talk', label: 'Talk', icon: '🎙', color: '#c8a882' },
   { id: 'breathe', label: 'Breathe', icon: '🌿', color: '#4a6741' },
   { id: 'bubbles', label: 'Bubbles', icon: '🫧', color: '#5b7fa6' },
   { id: 'sounds', label: 'Sounds', icon: '🎵', color: '#8b7ec8' },
+  { id: 'pomodoro', label: 'Focus', icon: '⏱', color: '#d4a53a' },
   { id: 'games', label: 'Games', icon: '🎮', color: '#d4a53a' },
   { id: 'mood', label: 'Journal', icon: '📔', color: '#c4736a' },
   { id: 'resources', label: 'Support', icon: '💛', color: '#6a9160' },
@@ -26,6 +28,7 @@ const TAB_TITLES: Record<Tab, string> = {
   breathe: 'Breathe',
   bubbles: 'Bubble Pop',
   sounds: 'Soundscapes',
+  pomodoro: 'Pomodoro',
   games: 'Calm Games',
   mood: 'Your Journal',
   resources: 'Support',
@@ -316,6 +319,7 @@ export default function App() {
               {tab.id === 'breathe' && <BreathingExercise />}
               {tab.id === 'bubbles' && <BubbleCanvas />}
               {tab.id === 'sounds' && <SoundscapePlayer />}
+              {tab.id === 'pomodoro' && <PomodoroTimer />}
               {tab.id === 'games' && <RelaxingGames />}
               {tab.id === 'resources' && <ResourcesPanel />}
             </div>

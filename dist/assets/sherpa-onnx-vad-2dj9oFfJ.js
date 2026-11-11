@@ -112,7 +112,7 @@ function initSherpaOnnxVadModelConfig(config, Module) {
   }
 
   const sileroVad =
-    initSherpaOnnxSileroVadModelConfig(config.sileroVad, Module);
+      initSherpaOnnxSileroVadModelConfig(config.sileroVad, Module);
 
   const tenVad = initSherpaOnnxTenVadModelConfig(config.tenVad, Module);
 
@@ -200,16 +200,16 @@ class CircularBuffer {
    */
   push(samples) {
     const pointer =
-      this.Module._malloc(samples.length * samples.BYTES_PER_ELEMENT);
+        this.Module._malloc(samples.length * samples.BYTES_PER_ELEMENT);
     this.Module.HEAPF32.set(samples, pointer / samples.BYTES_PER_ELEMENT);
     this.Module._SherpaOnnxCircularBufferPush(
-      this.handle, pointer, samples.length);
+        this.handle, pointer, samples.length);
     this.Module._free(pointer);
   }
 
   get(startIndex, n) {
     const p =
-      this.Module._SherpaOnnxCircularBufferGet(this.handle, startIndex, n);
+        this.Module._SherpaOnnxCircularBufferGet(this.handle, startIndex, n);
 
     const samplesPtr = p / 4;
     const samples = new Float32Array(n);
@@ -244,7 +244,7 @@ class Vad {
     this.config = configObj;
     const config = initSherpaOnnxVadModelConfig(configObj, Module);
     const handle = Module._SherpaOnnxCreateVoiceActivityDetector(
-      config.ptr, configObj.bufferSizeInSeconds || 30);
+        config.ptr, configObj.bufferSizeInSeconds || 30);
     freeConfig(config, Module);
 
     this.handle = handle;
@@ -259,10 +259,10 @@ class Vad {
   // samples is a float32 array
   acceptWaveform(samples) {
     const pointer =
-      this.Module._malloc(samples.length * samples.BYTES_PER_ELEMENT);
+        this.Module._malloc(samples.length * samples.BYTES_PER_ELEMENT);
     this.Module.HEAPF32.set(samples, pointer / samples.BYTES_PER_ELEMENT);
     this.Module._SherpaOnnxVoiceActivityDetectorAcceptWaveform(
-      this.handle, pointer, samples.length);
+        this.handle, pointer, samples.length);
     this.Module._free(pointer);
   }
 
@@ -272,7 +272,7 @@ class Vad {
 
   isDetected() {
     return this.Module._SherpaOnnxVoiceActivityDetectorDetected(this.handle) ==
-      1;
+        1;
   }
 
   pop() {
@@ -302,7 +302,7 @@ class Vad {
     }
 
     this.Module._SherpaOnnxDestroySpeechSegment(h);
-    return { samples: samples, start: start };
+    return {samples: samples, start: start};
   }
 
   reset() {
@@ -315,7 +315,7 @@ class Vad {
 };
 
 if (typeof process == 'object' && typeof process.versions == 'object' &&
-  typeof process.versions.node == 'string') {
+    typeof process.versions.node == 'string') {
   module.exports = {
     createVad,
     CircularBuffer,

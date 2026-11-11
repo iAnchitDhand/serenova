@@ -94,7 +94,7 @@ function initSherpaOnnxOfflineTtsMatchaModelConfig(config, Module) {
   const dictDirLen = Module.lengthBytesUTF8(dictDir) + 1;
 
   const n = acousticModelLen + vocoderLen + lexiconLen + tokensLen +
-    dataDirLen + dictDirLen;
+      dataDirLen + dictDirLen;
 
   const buffer = Module._malloc(n);
 
@@ -103,7 +103,7 @@ function initSherpaOnnxOfflineTtsMatchaModelConfig(config, Module) {
 
   let offset = 0;
   Module.stringToUTF8(
-    config.acousticModel || '', buffer + offset, acousticModelLen);
+      config.acousticModel || '', buffer + offset, acousticModelLen);
   offset += acousticModelLen;
 
   Module.stringToUTF8(config.vocoder || '', buffer + offset, vocoderLen);
@@ -158,7 +158,7 @@ function initSherpaOnnxOfflineTtsKokoroModelConfig(config, Module) {
   const langLen = Module.lengthBytesUTF8(config.lang || '') + 1;
 
   const n = modelLen + voicesLen + tokensLen + dataDirLen + dictDirLen +
-    lexiconLen + langLen;
+      lexiconLen + langLen;
 
   const buffer = Module._malloc(n);
 
@@ -271,7 +271,7 @@ function initSherpaOnnxOfflineTtsZipVoiceModelConfig(config, Module) {
   const lexiconLen = Module.lengthBytesUTF8(config.lexicon || '') + 1;
 
   const n = tokensLen + encoderLen + decoderLen + vocoderLen + dataDirLen +
-    lexiconLen;
+      lexiconLen;
 
   const buffer = Module._malloc(n);
 
@@ -389,23 +389,23 @@ function initSherpaOnnxOfflineTtsModelConfig(config, Module) {
 
 
   const vitsModelConfig = initSherpaOnnxOfflineTtsVitsModelConfig(
-    config.offlineTtsVitsModelConfig, Module);
+      config.offlineTtsVitsModelConfig, Module);
 
   const matchaModelConfig = initSherpaOnnxOfflineTtsMatchaModelConfig(
-    config.offlineTtsMatchaModelConfig, Module);
+      config.offlineTtsMatchaModelConfig, Module);
 
   const kokoroModelConfig = initSherpaOnnxOfflineTtsKokoroModelConfig(
-    config.offlineTtsKokoroModelConfig, Module);
+      config.offlineTtsKokoroModelConfig, Module);
 
   const kittenModelConfig = initSherpaOnnxOfflineTtsKittenModelConfig(
-    config.offlineTtsKittenModelConfig, Module);
+      config.offlineTtsKittenModelConfig, Module);
 
   const zipVoiceModelConfig = initSherpaOnnxOfflineTtsZipVoiceModelConfig(
-    config.offlineTtsZipVoiceModelConfig, Module);
+      config.offlineTtsZipVoiceModelConfig, Module);
 
   const len = vitsModelConfig.len + matchaModelConfig.len +
-    kokoroModelConfig.len + kittenModelConfig.len + zipVoiceModelConfig.len +
-    3 * 4;
+      kokoroModelConfig.len + kittenModelConfig.len + zipVoiceModelConfig.len +
+      3 * 4;
 
   const ptr = Module._malloc(len);
 
@@ -435,19 +435,19 @@ function initSherpaOnnxOfflineTtsModelConfig(config, Module) {
   offset += kittenModelConfig.len;
 
   Module._CopyHeap(
-    zipVoiceModelConfig.ptr, zipVoiceModelConfig.len, ptr + offset);
+      zipVoiceModelConfig.ptr, zipVoiceModelConfig.len, ptr + offset);
   offset += zipVoiceModelConfig.len;
 
   return {
     buffer: buffer, ptr: ptr, len: len, config: vitsModelConfig,
-    matcha: matchaModelConfig, kokoro: kokoroModelConfig,
-    kitten: kittenModelConfig, zipvoice: zipVoiceModelConfig,
+        matcha: matchaModelConfig, kokoro: kokoroModelConfig,
+        kitten: kittenModelConfig, zipvoice: zipVoiceModelConfig,
   }
 }
 
 function initSherpaOnnxOfflineTtsConfig(config, Module) {
   const modelConfig =
-    initSherpaOnnxOfflineTtsModelConfig(config.offlineTtsModelConfig, Module);
+      initSherpaOnnxOfflineTtsModelConfig(config.offlineTtsModelConfig, Module);
   const len = modelConfig.len + 4 * 4;
   const ptr = Module._malloc(len);
 
@@ -509,7 +509,7 @@ class OfflineTts {
     this.Module.stringToUTF8(config.text, textPtr, textLen);
 
     const h = this.Module._SherpaOnnxOfflineTtsGenerate(
-      this.handle, textPtr, config.sid, config.speed);
+        this.handle, textPtr, config.sid, config.speed);
 
     const numSamples = this.Module.HEAP32[h / 4 + 1];
     const sampleRate = this.Module.HEAP32[h / 4 + 2];
@@ -521,7 +521,7 @@ class OfflineTts {
     }
 
     this.Module._SherpaOnnxDestroyOfflineTtsGeneratedAudio(h);
-    return { samples: samples, sampleRate: sampleRate };
+    return {samples: samples, sampleRate: sampleRate};
   }
   save(filename, audio) {
     const samples = audio.samples;
@@ -643,7 +643,7 @@ function createOfflineTts(Module, myConfig) {
 }
 
 if (typeof process == 'object' && typeof process.versions == 'object' &&
-  typeof process.versions.node == 'string') {
+    typeof process.versions.node == 'string') {
   module.exports = {
     createOfflineTts,
   };

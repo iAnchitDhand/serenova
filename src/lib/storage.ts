@@ -16,8 +16,17 @@ export interface BreathingSession {
   type: 'box' | '478' | 'calm'
 }
 
+export interface PomodoroSession {
+  id: string
+  timestamp: number
+  workMinutes: number
+  breakMinutes: number
+  cycleCount: number
+}
+
 const MOOD_KEY = 'serenova_moods'
 const BREATHING_KEY = 'serenova_breathing'
+const POMODORO_KEY = 'serenova_pomodoro'
 
 export function saveMoodEntry(entry: MoodEntry): void {
   const existing = getMoodEntries()
@@ -55,6 +64,25 @@ export function getBreathingSessions(): BreathingSession[] {
     const raw = localStorage.getItem(BREATHING_KEY)
     if (!raw) return []
     return JSON.parse(raw) as BreathingSession[]
+  } catch {
+    return []
+  }
+}
+
+export function savePomodoroSession(session: PomodoroSession): void {
+  const existing = getPomodoroSessions()
+  existing.unshift(session)
+  const trimmed = existing.slice(0, 60)
+  try {
+    localStorage.setItem(POMODORO_KEY, JSON.stringify(trimmed))
+  } catch { }
+}
+
+export function getPomodoroSessions(): PomodoroSession[] {
+  try {
+    const raw = localStorage.getItem(POMODORO_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as PomodoroSession[]
   } catch {
     return []
   }

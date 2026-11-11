@@ -160,7 +160,7 @@ export default function VoiceCompanion() {
           )
         } catch (err) {
           console.error('Pipeline error:', err)
-          setError('Something went wrong. Please try again.')
+          setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
           setStreamingText('')
         } finally {
           setPipelineState('idle')
